@@ -485,21 +485,28 @@ document.addEventListener('keydown', (e) => {
 });
 
 function initKeyboard() {
-    // Teclado con el 0 (span 2 cols) y BORRAR (span 4 cols)
     const keys = ['7','8','9','+','x','<','4','5','6','-','^','>','1','2','3','²','³','⁴','0','⌫'];
     const container = document.getElementById('keyboard');
     if(!container) return;
     container.innerHTML = '';
+    
     keys.forEach(k => {
         const b = document.createElement('button');
         b.innerText = k === '⌫' ? 'BORRAR' : k; 
         
+        // Asignación inteligente de clases para la grilla
+        b.className = 'key';
         if (k === '⌫') {
-            b.className = 'key key-backspace';
+            b.classList.add('key-backspace');
         } else if (k === '0') {
-            b.className = 'key key-zero';
-        } else {
-            b.className = 'key ' + (isNaN(k) ? 'key-op' : '');
+            b.classList.add('key-zero');
+        } else if (isNaN(k) && k !== '0') {
+            b.classList.add('key-op');
+        }
+        
+        // Unificamos la tipografía de los exponentes para que el 4 no quede chico
+        if (['²','³','⁴'].includes(k)) {
+            b.classList.add('key-exp');
         }
 
         b.onmousedown = (ev) => { 
