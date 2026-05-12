@@ -1,8 +1,16 @@
 window.MathJax = {
   tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], formatError: (jax, err) => jax.createError("", "", "") },
-  options: { enableErrorOutputs: false },
-  startup: { pageReady: () => MathJax.startup.defaultPageReady() }
+  options: { enableErrorOutputs: false }
 };
+
+// ========================================================================
+// TRUCO CSS: Oculta el parpadeo de LaTeX crudo sin bloquear el JavaScript
+// ========================================================================
+document.head.insertAdjacentHTML("beforeend", `<style>
+    #exercise-display, #user-input-display { color: transparent !important; }
+    mjx-container { color: #000 !important; }
+    .error-text mjx-container { color: #e74c3c !important; }
+</style>`);
 
 let audioCtx;
 let timerInterval;
@@ -113,6 +121,16 @@ function selectAvatar(img, el) {
     playSound('click');
 }
 
+// Renderizador directo y seguro
+function renderMathDirectly(elementId, latexStr) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.innerHTML = `\\[ ${latexStr} \\]`;
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([el]).catch(e => console.warn(e));
+    }
+}
+
 function startGame() {
     initAudio();
     gameState.playerName = document.getElementById('player-name-input').value.trim() || "EQUIPO";
@@ -123,13 +141,8 @@ function startGame() {
     document.getElementById('screen-game').style.display = 'flex';
     
     updateUI();
-    
-    // Pequeña pausa para asegurar que el navegador aplicó el "display: flex" 
-    // antes de pedirle a MathJax que calcule tamaños.
-    setTimeout(() => {
-        playSound('spell');
-        nextExercise();
-    }, 50);
+    playSound('spell');
+    nextExercise(); 
 }
 
 function restartApp() {
@@ -157,34 +170,31 @@ function nextExercise() {
     if (gameState.isGameOver) return;
     currentExercise = generateSingleExercise();
     
-    const exDisplay = document.getElementById('exercise-display');
-    const d = document.getElementById('user-input-display');
-    
-    // 1. VOLVEMOS INVISIBLES LOS CONTENEDORES
-    // Esto asegura que el código crudo no se vea jamás.
-    exDisplay.style.opacity = "0";
-    d.style.opacity = "0";
-    
     gameState.userString = "";
     gameState.cursorPos = 0;
-    
-    // 2. Inyectamos el texto crudo
-    exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
-    d.classList.remove('error-text');
-    let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
-    d.innerHTML = `\\[ ${cursor} \\]`;
+    document.getElementById('user-input-display').classList.remove('error-text');
     
     updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
     
-    // 3. Le decimos a MathJax que procese todo
-    MathJax.typesetClear([exDisplay, d]);
-    MathJax.typesetPromise([exDisplay, d]).then(() => {
-        // 4. VOLVEMOS VISIBLES LOS CONTENEDORES
-        // Como MathJax ya terminó, lo único que aparecerá es la fórmula renderizada.
-        exDisplay.style.opacity = "1";
-        d.style.opacity = "1";
-        startTimer();
-    }).catch(err => console.error(err));
+    renderMathDirectly('exercise-display', currentExercise.q + " =");
+    renderUserAnswer();
+    startTimer();
+}
+
+function renderUserAnswer() {
+    if (gameState.isBlocked) return;
+    
+    let before = gameState.userString.slice(0, gameState.cursorPos);
+    let after = gameState.userString.slice(gameState.cursorPos);
+    
+    let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
+    let t = before + cursor + after;
+
+    const o = (t.match(/\{/g) || []).length;
+    const c = (t.match(/\}/g) || []).length;
+    for(let i=0; i < (o-c); i++) t += "}";
+    
+    renderMathDirectly('user-input-display', t);
 }
 
 function parseToMap(normStr) {
@@ -299,35 +309,14 @@ function processMiss() {
 
     const d = document.getElementById('user-input-display');
     d.classList.add('error-text'); 
-    d.innerHTML = `\\[ \\text{Solución: } ${currentExercise.a} \\]`;
-    MathJax.typesetClear([d]);
-    MathJax.typesetPromise([d]).then(() => {
-        animateDamage('app-container');
-        setTimeout(() => { 
-            gameState.isBlocked = false; 
-            if (gameState.playerHP <= 0) endGame(false); 
-            else nextExercise(); 
-        }, 4000);
-    });
-}
-
-function renderUserAnswer() {
-    const d = document.getElementById('user-input-display');
-    if (!d || gameState.isBlocked) return;
+    renderMathDirectly('user-input-display', `\\text{Solución: } ${currentExercise.a}`);
     
-    let before = gameState.userString.slice(0, gameState.cursorPos);
-    let after = gameState.userString.slice(gameState.cursorPos);
-    
-    let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
-    let t = (gameState.userString === "") ? cursor : before + cursor + after;
-
-    const o = (t.match(/\{/g) || []).length;
-    const c = (t.match(/\}/g) || []).length;
-    for(let i=0; i < (o-c); i++) t += "}";
-    
-    d.innerHTML = `\\[ ${t} \\]`;
-    MathJax.typesetClear([d]);
-    MathJax.typesetPromise([d]).catch(()=>{});
+    animateDamage('app-container');
+    setTimeout(() => { 
+        gameState.isBlocked = false; 
+        if (gameState.playerHP <= 0) endGame(false); 
+        else nextExercise(); 
+    }, 4000);
 }
 
 function handleInput(k) {
@@ -499,8 +488,9 @@ function endGame(win) {
             </div>`;
             mistakesList.appendChild(li);
         });
-        MathJax.typesetClear([mistakesList]);
-        MathJax.typesetPromise([mistakesList]);
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            window.MathJax.typesetPromise([mistakesList]).catch(()=>{});
+        }
     } else {
         mistakesBoard.style.display = 'none';
     }
