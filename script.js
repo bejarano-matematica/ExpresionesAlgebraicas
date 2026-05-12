@@ -185,14 +185,18 @@ function nextExercise() {
     if (gameState.isGameOver) return;
     currentExercise = generateSingleExercise();
     const exDisplay = document.getElementById('exercise-display');
+    
+    // Limpiamos visualmente la respuesta anterior antes de renderizar la nueva pregunta
+    document.getElementById('user-input-display').innerHTML = ""; 
+    
     exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
     gameState.userString = "";
     gameState.cursorPos = 0;
     updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
+    
     renderUserAnswer();
     MathJax.typesetPromise([exDisplay]).then(() => startTimer());
 }
-
 function parseToMap(normStr) {
     let map = {};
     if (normStr.match(/[\+\-]$/)) return null; 
@@ -313,16 +317,17 @@ function renderUserAnswer() {
     const d = document.getElementById('user-input-display');
     if (!d || gameState.isBlocked) return;
     
-    // Si la cadena está vacía y el cursor no debe verse, no renderizamos LaTeX complejo
-    if (gameState.userString === "" && !gameState.cursorVisible) {
-        d.innerHTML = "";
+    // NUEVO: Si no hay nada escrito, no mostramos nada (ni siquiera el cursor de LaTeX)
+    // Esto evita que se vea "\[ | \]" mientras MathJax carga.
+    if (gameState.userString === "") {
+        d.innerHTML = ""; 
         return;
     }
     
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
     
-    // Usamos una barra simple si MathJax todavía está "tímido"
+    // Solo armamos el string de LaTeX si hay contenido
     let t = before + (gameState.cursorVisible ? '|' : '\\phantom{|}') + after;
     
     const o = (t.match(/\{/g) || []).length;
