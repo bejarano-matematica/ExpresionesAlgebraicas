@@ -1,17 +1,3 @@
-window.MathJax = {
-  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], formatError: (jax, err) => jax.createError("", "", "") },
-  options: { enableErrorOutputs: false }
-};
-
-// ========================================================================
-// TRUCO CSS: Oculta el parpadeo de LaTeX crudo sin bloquear el JavaScript
-// ========================================================================
-document.head.insertAdjacentHTML("beforeend", `<style>
-    #exercise-display, #user-input-display { color: transparent !important; }
-    mjx-container { color: #000 !important; }
-    .error-text mjx-container { color: #e74c3c !important; }
-</style>`);
-
 let audioCtx;
 let timerInterval;
 const TIME_LIMIT = 120;
@@ -121,12 +107,12 @@ function selectAvatar(img, el) {
     playSound('click');
 }
 
-// Renderizador directo y seguro
 function renderMathDirectly(elementId, latexStr) {
     const el = document.getElementById(elementId);
     if (!el) return;
     el.innerHTML = `\\[ ${latexStr} \\]`;
     if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetClear([el]);
         window.MathJax.typesetPromise([el]).catch(e => console.warn(e));
     }
 }
