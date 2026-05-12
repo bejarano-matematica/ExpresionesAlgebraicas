@@ -75,19 +75,21 @@ h1 { font-size: 14px; color: #f1c40f; text-align: center; line-height: 1.5; marg
 }
 .answer-area { border: 4px dashed #f1c40f; margin-top: 8px; }
 
-/* --- TECLADO --- */
+/* --- TECLADO REDISEÑADO --- */
 .keyboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; width: 100%; margin: 10px 0; }
 .key { background: #bdc3c7; border: none; border-bottom: 3px solid #7f8c8d; font-family: 'Press Start 2P'; font-size: 8px; padding: 10px 0; cursor: pointer; }
 .key-op { background: #9b59b6; color: #fff; border-bottom: 3px solid #8e44ad; }
 .key:active { border-bottom: 0; transform: translateY(3px); }
 
-/* Nuevo botón de borrar ancho */
+/* Clases especiales para Cero y Borrar */
+.key-zero {
+    grid-column: span 2; /* Ocupa el espacio del 1 y el 2 */
+}
 .key-backspace {
-    grid-column: 1 / -1;
+    grid-column: span 4; /* Ocupa el espacio restante bajo el 3 y exponentes */
     background: #e74c3c !important;
     border-bottom: 3px solid #c0392b !important;
     color: #fff;
-    padding: 12px 0;
 }
 
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
@@ -117,51 +119,35 @@ h1 { font-size: 14px; color: #f1c40f; text-align: center; line-height: 1.5; marg
 @keyframes shake { 0%{transform:translate(3px,3px)} 25%{transform:translate(-3px,-3px)} 50%{transform:translate(3px,-3px)} 100%{transform:translate(0,0)} }
 .shake { animation: shake 0.3s; }
 
-/* ============================================================
-   OPTIMIZACIÓN NATIVA PARA CELULARES (MOBILE FIRST)
-   ============================================================ */
+/* --- MOBILE FIRST OPTIMIZATION --- */
 @media (max-width: 600px) {
     body { padding: 0; }
     .app-container { 
-        padding: 8px; 
-        border-width: 2px; 
-        border-radius: 0; 
-        min-height: 100dvh; /* Altura dinámica para evadir barra de Chrome */
-        justify-content: space-between;
+        padding: 8px; border-width: 2px; border-radius: 0; 
+        min-height: 100dvh; justify-content: space-between;
     }
     h1 { font-size: 11px; margin-bottom: 5px; }
     .avatar-option img { width: 90px; height: 90px; }
-    
     .battle-hud { margin-bottom: 5px; }
     .hud-avatar { width: 32px; height: 32px; min-width: 32px; }
-    
     .latex-container { min-height: 55px; font-size: 1rem; padding: 8px; }
     .battle-scene { height: 45px; margin-bottom: 5px; }
-    
     .keyboard { gap: 2px; margin: 5px 0; }
-    .key { padding: 12px 0; font-size: 9px; } /* Botones un poco más anchos de tap */
-    .key-backspace { padding: 15px 0; font-size: 10px; }
-    
+    .key { padding: 12px 0; font-size: 9px; } 
+    .key-backspace { padding: 12px 0; font-size: 10px; }
     .controls { gap: 5px; }
     .btn-attack, .btn-clear { padding: 12px; font-size: 8px; }
 }
 
-/* ============================================================
-   ESTILOS PARA EXPORTAR A PDF
-   ============================================================ */
 @media print {
     body { background: #fff; color: #000; padding: 0; margin: 0; font-family: Arial, sans-serif !important; }
     .app-container { border: none; box-shadow: none; max-width: 100%; width: 100%; padding: 0; margin: 0; }
-    .no-print, #screen-start, #screen-game, .controls { display: none !important; }
+    .no-print, #screen-start, #screen-game, .controls, .keyboard { display: none !important; }
     .print-header { display: block !important; }
     #screen-end { display: block !important; }
-
-    .ranking-board, .mistakes-board { 
-        background: #fff; border: 2px solid #000; color: #000; page-break-inside: avoid; margin-bottom: 20px;
-    }
+    .ranking-board, .mistakes-board { background: #fff; border: 2px solid #000; color: #000; page-break-inside: avoid; margin-bottom: 20px; }
     .ranking-board h2, .mistakes-board h2 { color: #000 !important; font-family: Arial, sans-serif; text-shadow: none; font-size: 14px !important; }
     .ranking-board li, .mistakes-board li { color: #000 !important; background: #fff !important; border: 1px solid #ccc !important; font-family: Arial, sans-serif; font-size: 12px !important; }
-    
     .err-q { color: #000 !important; font-weight: bold; }
     .err-u { color: #c0392b !important; }
     .err-c { color: #27ae60 !important; }
