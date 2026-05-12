@@ -1,11 +1,7 @@
 window.MathJax = {
   tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], formatError: (jax, err) => jax.createError("", "", "") },
   options: { enableErrorOutputs: false },
-  startup: {
-    pageReady: () => {
-      return MathJax.startup.defaultPageReady();
-    }
-  }
+  startup: { pageReady: () => MathJax.startup.defaultPageReady() }
 };
 
 let audioCtx;
@@ -71,33 +67,19 @@ function generateSingleExercise() {
     const types = ['suma', 'mult', 'resta'];
     const type = types[exerciseStep % 3];
     exerciseStep++;
+    
     let p1, p2;
     let lvl = gameState.currentLevel;
 
     if (lvl === 1) {
-        if (type === 'mult') {
-            p1 = generatePolyWithRules(1, 2, false); 
-            p2 = generatePolyWithRules(2, 2, true);  
-        } else {
-            p1 = generatePolyWithRules(2, 2, true); 
-            p2 = generatePolyWithRules(2, 2, true); 
-        }
+        if (type === 'mult') { p1 = generatePolyWithRules(1, 2, false); p2 = generatePolyWithRules(2, 2, true); } 
+        else { p1 = generatePolyWithRules(2, 2, true); p2 = generatePolyWithRules(2, 2, true); }
     } else if (lvl === 2) {
-        if (type === 'mult') {
-            p1 = generatePolyWithRules(2, 3, false); 
-            p2 = generatePolyWithRules(2, 3, false); 
-        } else {
-            p1 = generatePolyWithRules(3, 3, false); 
-            p2 = generatePolyWithRules(Math.random()>0.5 ? 3 : 2, 3, false); 
-        }
-    } else {
-        if (type === 'mult') {
-            p1 = generatePolyWithRules(3, 5, false); 
-            p2 = generatePolyWithRules(2, 5, false); 
-        } else {
-            p1 = generatePolyWithRules(4, 5, true); 
-            p2 = generatePolyWithRules(4, 5, false); 
-        }
+        if (type === 'mult') { p1 = generatePolyWithRules(2, 3, false); p2 = generatePolyWithRules(2, 3, false); } 
+        else { p1 = generatePolyWithRules(3, 3, false); p2 = generatePolyWithRules(Math.random()>0.5 ? 3 : 2, 3, false); }
+    } else { 
+        if (type === 'mult') { p1 = generatePolyWithRules(3, 5, false); p2 = generatePolyWithRules(2, 5, false); } 
+        else { p1 = generatePolyWithRules(4, 5, true); p2 = generatePolyWithRules(4, 5, false); }
     }
 
     if (type === 'suma' || type === 'resta') {
@@ -134,10 +116,16 @@ function startGame() {
     gameState.playerName = document.getElementById('player-name-input').value.trim() || "EQUIPO";
     document.getElementById('display-name').innerText = gameState.playerName.toUpperCase();
     document.getElementById('player-avatar-display').src = gameState.selectedAvatarImg;
+    
     document.getElementById('screen-start').style.display = 'none';
     document.getElementById('screen-game').style.display = 'flex';
     document.getElementById('exercise-display').innerHTML = "";
-    document.getElementById('user-input-display').innerHTML = "";
+    
+    // Asignamos una clase limpia al iniciar
+    const userDisplay = document.getElementById('user-input-display');
+    userDisplay.innerHTML = "";
+    userDisplay.classList.remove('error-text');
+    
     updateUI();
     MathJax.typesetPromise().then(() => {
         playSound('spell');
@@ -149,12 +137,14 @@ function restartApp() {
     clearInterval(timerInterval);
     levelUpAudio.pause();
     levelUpAudio.currentTime = 0;
+
     gameState = { 
         userString: "", cursorPos: 0, playerHP: 100, monsterHP: 100, 
         isGameOver: false, cursorVisible: true, isBlocked: false, 
         playerName: "EQUIPO", selectedAvatarImg: "jenna8bits.png",
         currentLevel: 1, score: 0, timeLeft: TIME_LIMIT, mistakes: []
     };
+    
     document.getElementById('screen-end').style.display = 'none';
     document.getElementById('screen-game').style.display = 'none';
     document.getElementById('screen-start').style.display = 'flex';
@@ -168,9 +158,14 @@ function nextExercise() {
     if (gameState.isGameOver) return;
     currentExercise = generateSingleExercise();
     const exDisplay = document.getElementById('exercise-display');
+    exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
+    
     gameState.userString = "";
     gameState.cursorPos = 0;
-    exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
+    
+    const d = document.getElementById('user-input-display');
+    d.classList.remove('error-text'); // Removemos el color rojo por si veníamos de un error
+    
     updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
     renderUserAnswer();
     MathJax.typesetPromise([exDisplay]).then(() => startTimer());
@@ -182,6 +177,7 @@ function parseToMap(normStr) {
     let s = normStr.replace(/[\{\}\s]/g, "").replace(/(\+|-)1x/g, "$1x").replace(/^1x/g, "x").replace(/^-1x/g, "-x");
     s = s.replace(/-/g, "+-");
     if (s.startsWith("+")) s = s.substring(1);
+    
     let terms = s.split("+").filter(t => t !== "");
     for (let t of terms) {
         let sign = 1;
@@ -198,6 +194,7 @@ function parseToMap(normStr) {
                 exp = parseInt(expVal);
             } else { exp = 1; }
         } else { coef = parseInt(t); }
+        
         if (isNaN(coef) || isNaN(exp)) return null;
         map[exp] = (map[exp] || 0) + (coef * sign);
     }
@@ -208,10 +205,13 @@ function isMathEquivalent(uStr, cStr) {
     let uMap = parseToMap(uStr);
     let cMap = parseToMap(cStr);
     if (!uMap || !cMap) return false;
+    
     for (let k in uMap) if (uMap[k] === 0) delete uMap[k];
     for (let k in cMap) if (cMap[k] === 0) delete cMap[k];
+
     let uKeys = Object.keys(uMap);
     let cKeys = Object.keys(cMap);
+
     if (uKeys.length !== cKeys.length) return false;
     for (let k of uKeys) if (uMap[k] !== cMap[k]) return false;
     return true;
@@ -225,8 +225,10 @@ function getPolynomialTerms(str) {
 
 function checkAnswer() {
     if (gameState.isGameOver || gameState.isBlocked || gameState.userString === "") return;
+    
     let uNormal = getPolynomialTerms(gameState.userString);
     let cNormal = getPolynomialTerms(currentExercise.a);
+    
     if (uNormal === cNormal) {
         processHit(); 
     } else if (isMathEquivalent(gameState.userString, currentExercise.a)) {
@@ -244,6 +246,7 @@ function processHit() {
     gameState.monsterHP -= 25; 
     updateUI();
     updateMessage("¡ACIERTO!");
+    
     setTimeout(() => { 
         if (gameState.monsterHP <= 0) {
             gameState.score += 500; 
@@ -252,8 +255,10 @@ function processHit() {
                 gameState.monsterHP = 100;
                 updateUI();
                 updateMessage(`¡NIVEL ${gameState.currentLevel} DESBLOQUEADO!`);
+                
                 levelUpAudio.currentTime = 0; 
-                levelUpAudio.play().catch(e => console.log("Audio falló", e));
+                levelUpAudio.play().catch(e => console.log("Audio no pudo iniciar", e));
+
                 setTimeout(() => { gameState.isBlocked = false; nextExercise(); }, 2500);
             } else {
                 endGame(true);
@@ -269,12 +274,23 @@ function processMiss() {
     gameState.isBlocked = true; clearInterval(timerInterval);
     playSound('hit'); gameState.playerHP -= 20; updateUI();
     updateMessage("ERROR");
-    gameState.mistakes.push({ q: currentExercise.q, user: gameState.userString === "" ? "Vacío" : gameState.userString, correct: currentExercise.a });
+    
+    gameState.mistakes.push({
+        q: currentExercise.q,
+        user: gameState.userString === "" ? "Vacío" : gameState.userString,
+        correct: currentExercise.a
+    });
+
     const d = document.getElementById('user-input-display');
-    d.style.color = "red"; d.innerHTML = `\\[ \\text{Solución: } ${currentExercise.a} \\]`;
+    d.classList.add('error-text'); // Cambia el color a rojo
+    d.innerHTML = `\\[ \\text{Solución: } ${currentExercise.a} \\]`;
     MathJax.typesetPromise([d]).then(() => {
         animateDamage('app-container');
-        setTimeout(() => { d.style.color = "black"; gameState.isBlocked = false; if (gameState.playerHP <= 0) endGame(false); else nextExercise(); }, 4000);
+        setTimeout(() => { 
+            gameState.isBlocked = false; 
+            if (gameState.playerHP <= 0) endGame(false); 
+            else nextExercise(); 
+        }, 4000);
     });
 }
 
@@ -285,31 +301,41 @@ function renderUserAnswer() {
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
     
-    // Fix para modo incógnito: usar \text{ } si está vacío para mantener el anclaje
-    let content = (gameState.userString === "") ? "\\text{ }" : before + after;
-    let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
-    let t = (gameState.userString === "") ? cursor : before + cursor + after;
-
+    let t = before + (gameState.cursorVisible ? '|' : '\\phantom{|}') + after;
+    
     const o = (t.match(/\{/g) || []).length;
     const c = (t.match(/\}/g) || []).length;
     for(let i=0; i < (o-c); i++) t += "}";
     
     d.innerHTML = `\\[ ${t} \\]`;
+    
+    // Promesa en cadena para que no se superpongan las llamadas a MathJax
     MathJax.typesetPromise([d]).catch(()=>{});
 }
 
 function handleInput(k) {
     if (gameState.isGameOver || gameState.isBlocked) return;
     playSound('click');
+    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
+    
+    const inExp = before.lastIndexOf('^{') > before.lastIndexOf('}');
+    
     let insertStr = k;
     if (k === '^') insertStr = "^{";
     else if (k === '²') insertStr = "^{2}";
     else if (k === '³') insertStr = "^{3}";
     else if (k === '⁴') insertStr = "^{4}";
+
+    // Auto-bajar del exponente al escribir un operador o paréntesis
+    if (inExp && (k === '+' || k === '-' || k === 'x' || k === '(' || k === ')')) {
+        insertStr = "}" + k;
+    }
+
     gameState.userString = before + insertStr + after;
     gameState.cursorPos += insertStr.length;
+    
     if (document.getElementById('battle-message').innerText.includes("CASI")) {
         updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
     }
@@ -319,31 +345,52 @@ function handleInput(k) {
 function backspace() {
     if (gameState.isGameOver || gameState.isBlocked || gameState.cursorPos === 0) return;
     playSound('click');
+    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
+    
     let delLength = 1;
     if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) delLength = 4;
     else if (before.endsWith("^{")) delLength = 2;
+    else if (before.endsWith("}")) delLength = 1; // Permite borrar la llave de cierre para volver a la potencia
+    
     gameState.userString = before.slice(0, -delLength) + after;
     gameState.cursorPos -= delLength;
+    
+    if (document.getElementById('battle-message').innerText.includes("CASI")) {
+        updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
+    }
     renderUserAnswer();
 }
 
 function moveCursor(dir) {
     if (gameState.isGameOver || gameState.isBlocked) return;
+    
+    let before = gameState.userString.slice(0, gameState.cursorPos);
+    let after = gameState.userString.slice(gameState.cursorPos);
+    const inExp = before.lastIndexOf('^{') > before.lastIndexOf('}');
+    
     if (dir === 'left' && gameState.cursorPos > 0) {
-        let before = gameState.userString.slice(0, gameState.cursorPos);
         if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) gameState.cursorPos -= 4;
         else if (before.endsWith("^{")) gameState.cursorPos -= 2;
+        else if (before.endsWith("}")) gameState.cursorPos -= 1;
         else gameState.cursorPos--;
         playSound('click');
     }
-    if (dir === 'right' && gameState.cursorPos < gameState.userString.length) {
-        let after = gameState.userString.slice(gameState.cursorPos);
-        if (after.startsWith("^{2}") || after.startsWith("^{3}") || after.startsWith("^{4}")) gameState.cursorPos += 4;
-        else if (after.startsWith("^{")) gameState.cursorPos += 2;
-        else gameState.cursorPos++;
-        playSound('click');
+    
+    if (dir === 'right') {
+        if (gameState.cursorPos < gameState.userString.length) {
+            if (after.startsWith("^{2}") || after.startsWith("^{3}") || after.startsWith("^{4}")) gameState.cursorPos += 4;
+            else if (after.startsWith("^{")) gameState.cursorPos += 2;
+            else if (after.startsWith("}")) gameState.cursorPos += 1;
+            else gameState.cursorPos++;
+            playSound('click');
+        } else if (inExp) {
+            // MAGIA DEL TECLADO FÍSICO: Auto-cerrar el exponente al apretar Flecha Derecha
+            gameState.userString += "}";
+            gameState.cursorPos++;
+            playSound('click');
+        }
     }
     renderUserAnswer();
 }
@@ -376,10 +423,19 @@ function updateUI() {
     document.getElementById('player-hp').style.width = Math.max(0, gameState.playerHP) + "%";
     const monsterBar = document.getElementById('monster-hp');
     monsterBar.style.width = Math.max(0, gameState.monsterHP) + "%";
+    
     const enemyName = document.getElementById('enemy-name-display');
-    if (gameState.currentLevel === 1) { monsterBar.style.backgroundColor = '#2ecc71'; if (enemyName) enemyName.innerText = `BOSS NIVEL 1`; }
-    else if (gameState.currentLevel === 2) { monsterBar.style.backgroundColor = '#e67e22'; if (enemyName) enemyName.innerText = `BOSS NIVEL 2`; }
-    else if (gameState.currentLevel === 3) { monsterBar.style.backgroundColor = '#9b59b6'; if (enemyName) enemyName.innerText = `BOSS FINAL SUPER PRO`; }
+    
+    if (gameState.currentLevel === 1) {
+        monsterBar.style.backgroundColor = '#2ecc71';
+        if (enemyName) enemyName.innerText = `BOSS NIVEL 1`;
+    } else if (gameState.currentLevel === 2) {
+        monsterBar.style.backgroundColor = '#e67e22';
+        if (enemyName) enemyName.innerText = `BOSS NIVEL 2`;
+    } else if (gameState.currentLevel === 3) {
+        monsterBar.style.backgroundColor = '#9b59b6';
+        if (enemyName) enemyName.innerText = `BOSS FINAL SUPER PRO`;
+    }
 }
 
 function updateMessage(t) { document.getElementById('battle-message').innerText = t; }
@@ -388,18 +444,23 @@ function animateDamage(id) { const el = document.getElementById(id); if(el) { el
 function endGame(win) {
     gameState.isGameOver = true; clearInterval(timerInterval);
     levelUpAudio.pause();
+    levelUpAudio.currentTime = 0;
+
     document.getElementById('screen-game').style.display = 'none';
     document.getElementById('screen-end').style.display = 'flex';
     document.getElementById('end-title').innerText = win ? "¡VICTORIA ABSOLUTA!" : "DERROTA";
     document.getElementById('end-title').style.color = win ? "#2ecc71" : "#e74c3c";
-    document.getElementById('end-message').innerText = win ? "HAS DERROTADO A LOS 3 JEFES." : "EL ÁLGEBRA FUE DEMASIADO.";
+    document.getElementById('end-message').innerText = win ? "HAS DERROTADO A LOS 3 JEFES." : "EL ÁLGEBRA FUE DEMASIADO PARA USTEDES.";
+    
     document.getElementById('end-score').innerText = `TU PUNTAJE: ${gameState.score} pts`;
     document.getElementById('print-team-name').innerText = `Equipo: ${gameState.playerName} - Puntaje: ${gameState.score} pts`;
+
     let leaderBoard = JSON.parse(localStorage.getItem('algebraRanking')) || [];
     leaderBoard.push({ name: gameState.playerName, score: gameState.score });
     leaderBoard.sort((a,b) => b.score - a.score);
     leaderBoard = leaderBoard.slice(0, 5); 
     localStorage.setItem('algebraRanking', JSON.stringify(leaderBoard));
+
     const listUl = document.getElementById('ranking-list');
     listUl.innerHTML = '';
     leaderBoard.forEach((entry, index) => {
@@ -407,18 +468,26 @@ function endGame(win) {
         li.innerHTML = `<span>${index + 1}. ${entry.name}</span> <span class="ranking-score">${entry.score} pts</span>`;
         listUl.appendChild(li);
     });
+
     const mistakesBoard = document.getElementById('mistakes-board');
     const mistakesList = document.getElementById('mistakes-list');
     mistakesList.innerHTML = '';
+    
     if (gameState.mistakes.length > 0) {
         mistakesBoard.style.display = 'block';
         gameState.mistakes.forEach((err) => {
             const li = document.createElement('li');
-            li.innerHTML = `<div class="error-item"><span class="err-q">Ejercicio: \\( ${err.q} \\)</span><span class="err-u">Tu respuesta: \\( ${err.user} \\)</span><span class="err-c">Correcto: \\( ${err.correct} \\)</span></div>`;
+            li.innerHTML = `<div class="error-item">
+                <span class="err-q">Ejercicio: \\( ${err.q} \\)</span>
+                <span class="err-u">Tu respuesta: \\( ${err.user} \\)</span>
+                <span class="err-c">Correcto: \\( ${err.correct} \\)</span>
+            </div>`;
             mistakesList.appendChild(li);
         });
         MathJax.typesetPromise([mistakesList]);
-    } else { mistakesBoard.style.display = 'none'; }
+    } else {
+        mistakesBoard.style.display = 'none';
+    }
 }
 
 function downloadPDF() { window.print(); }
@@ -427,13 +496,19 @@ document.getElementById('btn-spell').onclick = checkAnswer;
 document.getElementById('btn-reset').onclick = () => { if(!gameState.isBlocked) { gameState.userString = ""; gameState.cursorPos = 0; renderUserAnswer(); } };
 
 document.addEventListener('keydown', (e) => {
-    if (document.getElementById('screen-start').style.display === 'flex') { if (e.key === "Enter") startGame(); return; }
+    if (document.getElementById('screen-start').style.display === 'flex') { 
+        if (e.key === "Enter") startGame(); 
+        return; 
+    }
     if (!gameState.isGameOver && !gameState.isBlocked) {
-        if ("0123456789+-x^".includes(e.key)) handleInput(e.key);
-        else if (e.key === "Backspace") { e.preventDefault(); backspace(); }
-        else if (e.key === "Enter") checkAnswer();
-        else if (e.key === "ArrowLeft") { e.preventDefault(); moveCursor('left'); }
-        else if (e.key === "ArrowRight") { e.preventDefault(); moveCursor('right'); }
+        let key = e.key;
+        if (key === '*') key = 'x'; // Comodidad para multiplicar con el teclado
+        
+        if ("0123456789+-x^".includes(key)) handleInput(key);
+        else if (key === "Backspace") { e.preventDefault(); backspace(); }
+        else if (key === "Enter") checkAnswer();
+        else if (key === "ArrowLeft") { e.preventDefault(); moveCursor('left'); }
+        else if (key === "ArrowRight") { e.preventDefault(); moveCursor('right'); }
     }
 });
 
@@ -445,11 +520,20 @@ function initKeyboard() {
     keys.forEach(k => {
         const b = document.createElement('button');
         b.innerText = k === '⌫' ? 'BORRAR' : k; 
+        
         b.className = 'key';
-        if (k === '⌫') b.classList.add('key-backspace');
-        else if (k === '0') b.classList.add('key-zero');
-        else if (isNaN(k) && k !== '0') b.classList.add('key-op');
-        if (['²','³','⁴'].includes(k)) b.classList.add('key-exp');
+        if (k === '⌫') {
+            b.classList.add('key-backspace');
+        } else if (k === '0') {
+            b.classList.add('key-zero');
+        } else if (isNaN(k) && k !== '0') {
+            b.classList.add('key-op');
+        }
+        
+        if (['²','³','⁴'].includes(k)) {
+            b.classList.add('key-exp');
+        }
+
         b.onmousedown = (ev) => { 
             ev.preventDefault(); 
             if (k === '⌫') backspace(); 
