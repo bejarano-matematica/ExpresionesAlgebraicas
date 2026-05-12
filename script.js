@@ -11,6 +11,20 @@ let exerciseStep = 0;
 
 const levelUpAudio = new Audio('SIX SEVEN-recortado.mp3');
 
+// --- NUEVO: FILA DE ESPERA DE MATHJAX ---
+// Esto evita que MathJax se cuelgue al recibir 2 órdenes al mismo tiempo
+let mjPromise = Promise.resolve();
+function updateMath(elementIds) {
+    mjPromise = mjPromise.then(() => {
+        const elements = elementIds.map(id => document.getElementById(id)).filter(el => el);
+        if (elements.length > 0) {
+            MathJax.typesetClear(elements);
+            return MathJax.typesetPromise(elements);
+        }
+    }).catch(err => console.error("MathJax Error:", err));
+    return mjPromise;
+}
+
 function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -122,21 +136,9 @@ function startGame() {
     document.getElementById('screen-start').style.display = 'none';
     document.getElementById('screen-game').style.display = 'flex';
     
-    // Texto invisible o espacio de carga para anclar MathJax
-    document.getElementById('exercise-display').innerHTML = "\\text{ }";
-    
-    const userDisplay = document.getElementById('user-input-display');
-    userDisplay.innerHTML = "\\text{ }";
-    userDisplay.classList.remove('error-text');
-    
     updateUI();
-    MathJax.typesetPromise().then(() => {
-        playSound('spell');
-        nextExercise();
-    }).catch((err) => {
-        console.error("Error MathJax:", err);
-        nextExercise();
-    });
+    playSound('spell');
+    nextExercise(); // Dejamos que nextExercise organice el renderizado
 }
 
 function restartApp() {
@@ -164,18 +166,23 @@ function nextExercise() {
     if (gameState.isGameOver) return;
     currentExercise = generateSingleExercise();
     const exDisplay = document.getElementById('exercise-display');
+    const d = document.getElementById('user-input-display');
     
     gameState.userString = "";
     gameState.cursorPos = 0;
     
     exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
+    d.classList.remove('error-text');
     
-    const d = document.getElementById('user-input-display');
-    d.classList.remove('error-text'); 
+    let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
+    d.innerHTML = `\\[ ${cursor} \\]`;
     
     updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
-    renderUserAnswer();
-    MathJax.typesetPromise([exDisplay]).then(() => startTimer());
+    
+    // MANDAMOS TODO JUNTO A LA FILA DE ESPERA DE MATHJAX
+    updateMath(['exercise-display', 'user-input-display']).then(() => {
+        startTimer();
+    });
 }
 
 function parseToMap(normStr) {
@@ -291,7 +298,7 @@ function processMiss() {
     const d = document.getElementById('user-input-display');
     d.classList.add('error-text'); 
     d.innerHTML = `\\[ \\text{Solución: } ${currentExercise.a} \\]`;
-    MathJax.typesetPromise([d]).then(() => {
+    updateMath(['user-input-display']).then(() => {
         animateDamage('app-container');
         setTimeout(() => { 
             gameState.isBlocked = false; 
@@ -308,17 +315,15 @@ function renderUserAnswer() {
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
     
-    // FIX DE INCOGNITO: El ancla invisible si está vacío
-    let content = (gameState.userString === "") ? "\\text{ }" : before + after;
     let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
     let t = (gameState.userString === "") ? cursor : before + cursor + after;
-    
+
     const o = (t.match(/\{/g) || []).length;
     const c = (t.match(/\}/g) || []).length;
     for(let i=0; i < (o-c); i++) t += "}";
     
     d.innerHTML = `\\[ ${t} \\]`;
-    MathJax.typesetPromise([d]).catch(()=>{});
+    updateMath(['user-input-display']);
 }
 
 function handleInput(k) {
@@ -490,7 +495,7 @@ function endGame(win) {
             </div>`;
             mistakesList.appendChild(li);
         });
-        MathJax.typesetPromise([mistakesList]);
+        updateMath(['mistakes-list']);
     } else {
         mistakesBoard.style.display = 'none';
     }
