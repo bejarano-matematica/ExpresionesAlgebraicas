@@ -81,15 +81,20 @@ h1 { font-size: 14px; color: #f1c40f; text-align: center; line-height: 1.5; marg
 .key-op { background: #9b59b6; color: #fff; border-bottom: 3px solid #8e44ad; }
 .key:active { border-bottom: 0; transform: translateY(3px); }
 
-/* Clases especiales para Cero y Borrar */
+/* Clases específicas para solucionar el diseño */
 .key-zero {
-    grid-column: span 2; /* Ocupa el espacio del 1 y el 2 */
+    grid-column: span 3; /* Ocupa debajo del 1, 2 y 3 */
 }
 .key-backspace {
-    grid-column: span 4; /* Ocupa el espacio restante bajo el 3 y exponentes */
+    grid-column: span 3; /* Ocupa debajo de los exponentes */
     background: #e74c3c !important;
     border-bottom: 3px solid #c0392b !important;
     color: #fff;
+}
+.key-exp {
+    font-family: 'Arial', sans-serif !important; /* Unifica el tamaño de los exponentes */
+    font-size: 14px !important;
+    font-weight: bold;
 }
 
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
@@ -100,13 +105,12 @@ h1 { font-size: 14px; color: #f1c40f; text-align: center; line-height: 1.5; marg
 .battle-scene { height: 60px; width: 100%; background: #000; border: 4px solid #7f8c8d; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
 .battle-message { font-size: 9px; text-align: center; padding: 10px; line-height: 1.6; text-transform: uppercase; color: #bdc3c7; }
 
-/* --- RANKING BOARD --- */
+/* --- RANKING BOARD & MISTAKES --- */
 .ranking-board { background: #000; border: 4px solid #7f8c8d; padding: 15px; width: 100%; text-align: left; margin: 10px 0; }
 .ranking-board ul { list-style: none; padding: 0; margin-top: 10px; }
 .ranking-board li { font-size: 9px; color: #fff; margin-bottom: 10px; display: flex; justify-content: space-between; }
 .ranking-score { color: #f1c40f; }
 
-/* --- PANEL DE ERRORES --- */
 .mistakes-board { background: #000; border: 4px solid #e74c3c; padding: 15px; width: 100%; text-align: left; margin: 10px 0; }
 .mistakes-board ul { list-style: none; padding: 0; margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 .mistakes-board li { font-size: 9px; color: #fff; background: #2c3e50; padding: 10px; border: 2px solid #7f8c8d; }
