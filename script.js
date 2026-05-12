@@ -34,10 +34,12 @@ const randomCoef = () => (Math.floor(Math.random() * 6) + 1) * randomSign();
 function generatePolyWithRules(termsCount, maxDegree, exactDegree = false) {
     let terms = [];
     let usedExponents = new Set();
+    
     if (exactDegree && termsCount > 0) {
         usedExponents.add(maxDegree);
         terms.push({c: randomCoef(), e: maxDegree});
     }
+    
     let attempts = 0;
     while(usedExponents.size < termsCount && attempts < 100) {
         let e = Math.floor(Math.random() * (maxDegree + 1));
@@ -119,16 +121,20 @@ function startGame() {
     
     document.getElementById('screen-start').style.display = 'none';
     document.getElementById('screen-game').style.display = 'flex';
-    document.getElementById('exercise-display').innerHTML = "";
     
-    // Asignamos una clase limpia al iniciar
+    // Texto invisible o espacio de carga para anclar MathJax
+    document.getElementById('exercise-display').innerHTML = "\\text{ }";
+    
     const userDisplay = document.getElementById('user-input-display');
-    userDisplay.innerHTML = "";
+    userDisplay.innerHTML = "\\text{ }";
     userDisplay.classList.remove('error-text');
     
     updateUI();
     MathJax.typesetPromise().then(() => {
         playSound('spell');
+        nextExercise();
+    }).catch((err) => {
+        console.error("Error MathJax:", err);
         nextExercise();
     });
 }
@@ -158,13 +164,14 @@ function nextExercise() {
     if (gameState.isGameOver) return;
     currentExercise = generateSingleExercise();
     const exDisplay = document.getElementById('exercise-display');
-    exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
     
     gameState.userString = "";
     gameState.cursorPos = 0;
     
+    exDisplay.innerHTML = `\\[ ${currentExercise.q} = \\]`;
+    
     const d = document.getElementById('user-input-display');
-    d.classList.remove('error-text'); // Removemos el color rojo por si veníamos de un error
+    d.classList.remove('error-text'); 
     
     updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
     renderUserAnswer();
@@ -282,7 +289,7 @@ function processMiss() {
     });
 
     const d = document.getElementById('user-input-display');
-    d.classList.add('error-text'); // Cambia el color a rojo
+    d.classList.add('error-text'); 
     d.innerHTML = `\\[ \\text{Solución: } ${currentExercise.a} \\]`;
     MathJax.typesetPromise([d]).then(() => {
         animateDamage('app-container');
@@ -301,15 +308,16 @@ function renderUserAnswer() {
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
     
-    let t = before + (gameState.cursorVisible ? '|' : '\\phantom{|}') + after;
+    // FIX DE INCOGNITO: El ancla invisible si está vacío
+    let content = (gameState.userString === "") ? "\\text{ }" : before + after;
+    let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
+    let t = (gameState.userString === "") ? cursor : before + cursor + after;
     
     const o = (t.match(/\{/g) || []).length;
     const c = (t.match(/\}/g) || []).length;
     for(let i=0; i < (o-c); i++) t += "}";
     
     d.innerHTML = `\\[ ${t} \\]`;
-    
-    // Promesa en cadena para que no se superpongan las llamadas a MathJax
     MathJax.typesetPromise([d]).catch(()=>{});
 }
 
@@ -328,7 +336,6 @@ function handleInput(k) {
     else if (k === '³') insertStr = "^{3}";
     else if (k === '⁴') insertStr = "^{4}";
 
-    // Auto-bajar del exponente al escribir un operador o paréntesis
     if (inExp && (k === '+' || k === '-' || k === 'x' || k === '(' || k === ')')) {
         insertStr = "}" + k;
     }
@@ -352,7 +359,7 @@ function backspace() {
     let delLength = 1;
     if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) delLength = 4;
     else if (before.endsWith("^{")) delLength = 2;
-    else if (before.endsWith("}")) delLength = 1; // Permite borrar la llave de cierre para volver a la potencia
+    else if (before.endsWith("}")) delLength = 1; 
     
     gameState.userString = before.slice(0, -delLength) + after;
     gameState.cursorPos -= delLength;
@@ -386,7 +393,6 @@ function moveCursor(dir) {
             else gameState.cursorPos++;
             playSound('click');
         } else if (inExp) {
-            // MAGIA DEL TECLADO FÍSICO: Auto-cerrar el exponente al apretar Flecha Derecha
             gameState.userString += "}";
             gameState.cursorPos++;
             playSound('click');
@@ -502,7 +508,7 @@ document.addEventListener('keydown', (e) => {
     }
     if (!gameState.isGameOver && !gameState.isBlocked) {
         let key = e.key;
-        if (key === '*') key = 'x'; // Comodidad para multiplicar con el teclado
+        if (key === '*') key = 'x'; 
         
         if ("0123456789+-x^".includes(key)) handleInput(key);
         else if (key === "Backspace") { e.preventDefault(); backspace(); }
