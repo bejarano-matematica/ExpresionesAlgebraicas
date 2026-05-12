@@ -320,6 +320,7 @@ function handleInput(k) {
     if (k === '^') insertStr = "^{";
     else if (k === '²') insertStr = "^{2}";
     else if (k === '³') insertStr = "^{3}";
+    else if (k === '⁴') insertStr = "^{4}";
 
     gameState.userString = before + insertStr + after;
     gameState.cursorPos += insertStr.length;
@@ -338,7 +339,7 @@ function backspace() {
     let after = gameState.userString.slice(gameState.cursorPos);
     
     let delLength = 1;
-    if (before.endsWith("^{2}") || before.endsWith("^{3}")) delLength = 4;
+    if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) delLength = 4;
     else if (before.endsWith("^{")) delLength = 2;
     
     gameState.userString = before.slice(0, -delLength) + after;
@@ -354,14 +355,14 @@ function moveCursor(dir) {
     if (gameState.isGameOver || gameState.isBlocked) return;
     if (dir === 'left' && gameState.cursorPos > 0) {
         let before = gameState.userString.slice(0, gameState.cursorPos);
-        if (before.endsWith("^{2}") || before.endsWith("^{3}")) gameState.cursorPos -= 4;
+        if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) gameState.cursorPos -= 4;
         else if (before.endsWith("^{")) gameState.cursorPos -= 2;
         else gameState.cursorPos--;
         playSound('click');
     }
     if (dir === 'right' && gameState.cursorPos < gameState.userString.length) {
         let after = gameState.userString.slice(gameState.cursorPos);
-        if (after.startsWith("^{2}") || after.startsWith("^{3}")) gameState.cursorPos += 4;
+        if (after.startsWith("^{2}") || after.startsWith("^{3}") || after.startsWith("^{4}")) gameState.cursorPos += 4;
         else if (after.startsWith("^{")) gameState.cursorPos += 2;
         else gameState.cursorPos++;
         playSound('click');
@@ -484,8 +485,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 function initKeyboard() {
-    // Teclado con el 0 incluido y el botón grande de borrar
-    const keys = ['7','8','9','+','x','<','4','5','6','-','^','>','1','2','3','0','²','³','⌫'];
+    // Teclado con el 0 (span 2 cols) y BORRAR (span 4 cols)
+    const keys = ['7','8','9','+','x','<','4','5','6','-','^','>','1','2','3','²','³','⁴','0','⌫'];
     const container = document.getElementById('keyboard');
     if(!container) return;
     container.innerHTML = '';
@@ -495,8 +496,10 @@ function initKeyboard() {
         
         if (k === '⌫') {
             b.className = 'key key-backspace';
+        } else if (k === '0') {
+            b.className = 'key key-zero';
         } else {
-            b.className = 'key ' + (isNaN(k) && k !== '0' ? 'key-op' : '');
+            b.className = 'key ' + (isNaN(k) ? 'key-op' : '');
         }
 
         b.onmousedown = (ev) => { 
