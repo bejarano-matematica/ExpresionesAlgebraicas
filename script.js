@@ -1,6 +1,12 @@
 window.MathJax = {
   tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], formatError: (jax, err) => jax.createError("", "", "") },
-  options: { enableErrorOutputs: false }
+  options: { enableErrorOutputs: false },
+  startup: {
+    pageReady: () => {
+      console.log('MathJax está listo');
+      return MathJax.startup.defaultPageReady();
+    }
+  }
 };
 
 let audioCtx;
@@ -133,12 +139,23 @@ function startGame() {
     document.getElementById('display-name').innerText = gameState.playerName.toUpperCase();
     document.getElementById('player-avatar-display').src = gameState.selectedAvatarImg;
     
+    // 1. Primero ocultamos el inicio y mostramos el juego
     document.getElementById('screen-start').style.display = 'none';
     document.getElementById('screen-game').style.display = 'flex';
     
+    // 2. Limpiamos los contenedores de texto por si quedó basura visual del renderizado anterior
+    document.getElementById('exercise-display').innerHTML = "";
+    document.getElementById('user-input-display').innerHTML = "";
+    
     updateUI();
+
+    // 3. Solo lanzamos el primer ejercicio cuando MathJax confirme que procesó el contenedor
     MathJax.typesetPromise().then(() => {
         playSound('spell');
+        nextExercise();
+    }).catch((err) => {
+        // Si hay error en la carga inicial, igual intentamos arrancar
+        console.error("Error MathJax:", err);
         nextExercise();
     });
 }
@@ -296,9 +313,16 @@ function renderUserAnswer() {
     const d = document.getElementById('user-input-display');
     if (!d || gameState.isBlocked) return;
     
+    // Si la cadena está vacía y el cursor no debe verse, no renderizamos LaTeX complejo
+    if (gameState.userString === "" && !gameState.cursorVisible) {
+        d.innerHTML = "";
+        return;
+    }
+    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
     
+    // Usamos una barra simple si MathJax todavía está "tímido"
     let t = before + (gameState.cursorVisible ? '|' : '\\phantom{|}') + after;
     
     const o = (t.match(/\{/g) || []).length;
