@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batalla Algebraica. Prof: Bejarano, Juan Marcelo</title>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], formatError: (jax, err) => jax.createError("", "", "") },
+            options: { enableErrorOutputs: false }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <div id="screen-start" class="screen" style="display: flex;">
+            <h1>BATALLA ALGEBRAICA</h1>
+            <p class="pixel-text">Escribe el nombre de tu equipo:</p>
+            <input type="text" id="player-name-input" maxlength="12" placeholder="NOMBRE" autocomplete="off">
+            <p class="pixel-text">ELIGE TU AVATAR:</p>
+            <div class="avatar-selector">
+                <div class="avatar-option selected" onclick="selectAvatar('jenna8bits.png', this)">
+                    <img src="jenna8bits.png" alt="Avatar 1">
+                </div>
+                <div class="avatar-option" onclick="selectAvatar('messi8bits.png', this)">
+                    <img src="messi8bits.png" alt="Avatar 2">
+                </div>
+                <div class="avatar-option" onclick="selectAvatar('batman8bits.png', this)">
+                    <img src="batman8bits.png" alt="Avatar 3">
+                </div>
+            </div>
+            <button onclick="startGame()" class="btn-attack">COMENZAR DUELO</button>
+        </div>
+
+        <div id="screen-game" class="screen" style="display: none;">
+            <header class="battle-hud">
+                <div class="stat-box player-stat-box">
+                    <div class="player-info">
+                        <img id="player-avatar-display" src="jenna8bits.png" class="hud-avatar" alt="Avatar">
+                        <span id="display-name">EQUIPO</span>
+                    </div>
+                    <div class="hp-bar-container"><div id="player-hp" class="hp-bar" style="width: 100%;"></div></div>
+                </div>
+                
+                <div class="timer-container">
+                    <div id="timer-display">TIEMPO: 120s</div>
+                </div>
+
+                <div class="stat-box enemy-stat-box">
+                    <div class="enemy-info">
+                        <span id="enemy-name-display">BOSS NIVEL 1</span>
+                    </div>
+                    <div class="hp-bar-container"><div id="monster-hp" class="hp-bar" style="width: 100%;"></div></div>
+                </div>
+            </header>
+
+            <div id="battle-scene" class="battle-scene">
+                <div id="battle-message" class="battle-message">¡PREPARATE!</div>
+            </div>
+
+            <div class="exercise-card">
+                <div id="exercise-display" class="latex-container"></div>
+                <div class="answer-area">
+                    <div id="user-input-display" class="latex-container"></div>
+                </div>
+            </div>
+
+            <div class="keyboard" id="keyboard"></div>
+
+            <div class="controls">
+                <button id="btn-spell" class="btn-attack">¡LANZAR ATAQUE!</button>
+                <button id="btn-reset" class="btn-clear">BORRAR TODO</button>
+            </div>
+        </div>
+
+        <div id="screen-end" class="screen" style="display: none;">
+            <h1 id="end-title" class="no-print">FIN</h1>
+            <p id="end-message" class="pixel-text no-print"></p>
+            
+            <div id="print-area" style="width: 100%;">
+                <div class="print-header" style="display: none; text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #000; font-family: Arial, sans-serif;">Reporte de Batalla Algebraica</h2>
+                    <p id="print-team-name" style="font-family: Arial, sans-serif;"></p>
+                </div>
+
+                <p id="end-score" class="pixel-text" style="color: #2ecc71; font-size: 12px; margin: 10px 0; text-align: center;"></p>
+
+                <div class="ranking-board">
+                    <h2 style="font-size: 10px; color: #f1c40f; text-align: center; margin-bottom: 10px;">TOP 5 EQUIPOS</h2>
+                    <ul id="ranking-list"></ul>
+                </div>
+
+                <div class="mistakes-board" id="mistakes-board" style="display: none;">
+                    <h2 style="font-size: 10px; color: #e74c3c; text-align: center; margin-bottom: 10px;">REPORTE DE ERRORES</h2>
+                    <ul id="mistakes-list"></ul>
+                </div>
+            </div>
+
+            <div class="controls no-print" style="margin-top: 10px;">
+                <button onclick="downloadPDF()" class="btn-clear" style="background: #3498db; border-bottom: 4px solid #2980b9;">DESCARGAR PDF</button>
+                <button onclick="restartApp()" class="btn-attack">JUGAR DE NUEVO</button>
+            </div>
+        </div>
+
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
