@@ -176,7 +176,6 @@ function nextExercise() {
     MathJax.typesetPromise([exDisplay]).then(() => startTimer());
 }
 
-// --- EVALUADOR ALGEBRAICO Y NORMALIZADOR ---
 function parseToMap(normStr) {
     let map = {};
     if (normStr.match(/[\+\-]$/)) return null; 
@@ -236,7 +235,6 @@ function checkAnswer() {
     if (uNormal === cNormal) {
         processHit(); 
     } else if (isMathEquivalent(gameState.userString, currentExercise.a)) {
-        // EVALUADOR MATEMÁTICO REAL: Es correcto algebraicamente pero no está simplificado
         updateMessage("¡CASI! REDUCÍ TÉRMINOS SEMEJANTES");
         playSound('click');
     } else {
@@ -294,7 +292,6 @@ function processMiss() {
     });
 }
 
-// --- CURSOR Y EDICIÓN ---
 function renderUserAnswer() {
     const d = document.getElementById('user-input-display');
     if (!d || gameState.isBlocked) return;
@@ -467,9 +464,7 @@ function endGame(win) {
     }
 }
 
-function downloadPDF() {
-    window.print();
-}
+function downloadPDF() { window.print(); }
 
 document.getElementById('btn-spell').onclick = checkAnswer;
 document.getElementById('btn-reset').onclick = () => { if(!gameState.isBlocked) { gameState.userString = ""; gameState.cursorPos = 0; renderUserAnswer(); } };
@@ -483,21 +478,27 @@ document.addEventListener('keydown', (e) => {
         if ("0123456789+-x^".includes(e.key)) handleInput(e.key);
         else if (e.key === "Backspace") { e.preventDefault(); backspace(); }
         else if (e.key === "Enter") checkAnswer();
-        // NAVEGACIÓN CON TECLADO FÍSICO
         else if (e.key === "ArrowLeft") { e.preventDefault(); moveCursor('left'); }
         else if (e.key === "ArrowRight") { e.preventDefault(); moveCursor('right'); }
     }
 });
 
 function initKeyboard() {
-    // NUEVO TECLADO VIRTUAL: Removidos paréntesis, sumados < y >
-    const keys = ['7','8','9','+','x','<','4','5','6','-','^','>','1','2','3','²','³','⌫'];
+    // Teclado con el 0 incluido y el botón grande de borrar
+    const keys = ['7','8','9','+','x','<','4','5','6','-','^','>','1','2','3','0','²','³','⌫'];
     const container = document.getElementById('keyboard');
     if(!container) return;
     container.innerHTML = '';
     keys.forEach(k => {
         const b = document.createElement('button');
-        b.innerText = k; b.className = isNaN(k)&&k!=='0' ? 'key key-op' : 'key';
+        b.innerText = k === '⌫' ? 'BORRAR' : k; 
+        
+        if (k === '⌫') {
+            b.className = 'key key-backspace';
+        } else {
+            b.className = 'key ' + (isNaN(k) && k !== '0' ? 'key-op' : '');
+        }
+
         b.onmousedown = (ev) => { 
             ev.preventDefault(); 
             if (k === '⌫') backspace(); 
