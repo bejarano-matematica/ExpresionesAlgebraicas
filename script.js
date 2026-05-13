@@ -5,6 +5,32 @@ let exerciseStep = 0;
 
 const levelUpAudio = new Audio('SIX SEVEN-recortado.mp3');
 
+function renderMathDirectly(elementId, latexStr) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    // SOLUCIÓN VISUAL: Ajuste de escala para expresiones muy largas
+    // Si el texto es largo, bajamos el tamaño de fuente y permitimos scroll horizontal
+    el.style.overflowX = "auto";
+    el.style.whiteSpace = "nowrap";
+    if (latexStr.length > 60) {
+        el.style.fontSize = "0.85rem";
+    } else if (latexStr.length > 40) {
+        el.style.fontSize = "1rem";
+    } else {
+        el.style.fontSize = "1.2rem";
+    }
+
+    el.innerHTML = `\\( ${latexStr} \\)`;
+    
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([el]).then(() => {
+            const mjx = el.querySelector('mjx-container');
+            if (mjx) mjx.style.color = 'black';
+        }).catch(err => console.warn("MathJax error:", err));
+    }
+}
+
 function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -28,12 +54,10 @@ const randomCoef = () => (Math.floor(Math.random() * 6) + 1) * randomSign();
 function generatePolyWithRules(termsCount, maxDegree, exactDegree = false) {
     let terms = [];
     let usedExponents = new Set();
-    
     if (exactDegree && termsCount > 0) {
         usedExponents.add(maxDegree);
         terms.push({c: randomCoef(), e: maxDegree});
     }
-    
     let attempts = 0;
     while(usedExponents.size < termsCount && attempts < 100) {
         let e = Math.floor(Math.random() * (maxDegree + 1));
@@ -63,10 +87,8 @@ function generateSingleExercise() {
     const types = ['suma', 'mult', 'resta'];
     const type = types[exerciseStep % 3];
     exerciseStep++;
-    
     let p1, p2;
     let lvl = gameState.currentLevel;
-
     if (lvl === 1) {
         if (type === 'mult') { p1 = generatePolyWithRules(1, 2, false); p2 = generatePolyWithRules(2, 2, true); } 
         else { p1 = generatePolyWithRules(2, 2, true); p2 = generatePolyWithRules(2, 2, true); }
@@ -77,7 +99,6 @@ function generateSingleExercise() {
         if (type === 'mult') { p1 = generatePolyWithRules(3, 5, false); p2 = generatePolyWithRules(2, 5, false); } 
         else { p1 = generatePolyWithRules(4, 5, true); p2 = generatePolyWithRules(4, 5, false); }
     }
-
     if (type === 'suma' || type === 'resta') {
         const sign = type === 'suma' ? 1 : -1;
         const resMap = {};
@@ -92,7 +113,6 @@ function generateSingleExercise() {
     }
 }
 
-let currentExercise;
 let gameState = { 
     userString: "", cursorPos: 0, playerHP: 100, monsterHP: 100, 
     isGameOver: false, cursorVisible: true, isBlocked: false, 
@@ -107,25 +127,13 @@ function selectAvatar(img, el) {
     playSound('click');
 }
 
-function renderMathDirectly(elementId, latexStr) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    el.innerHTML = `\\[ ${latexStr} \\]`;
-    if (window.MathJax && window.MathJax.typesetPromise) {
-        window.MathJax.typesetClear([el]);
-        window.MathJax.typesetPromise([el]).catch(e => console.warn(e));
-    }
-}
-
 function startGame() {
     initAudio();
     gameState.playerName = document.getElementById('player-name-input').value.trim() || "EQUIPO";
     document.getElementById('display-name').innerText = gameState.playerName.toUpperCase();
     document.getElementById('player-avatar-display').src = gameState.selectedAvatarImg;
-    
     document.getElementById('screen-start').style.display = 'none';
     document.getElementById('screen-game').style.display = 'flex';
-    
     updateUI();
     playSound('spell');
     nextExercise(); 
@@ -135,14 +143,12 @@ function restartApp() {
     clearInterval(timerInterval);
     levelUpAudio.pause();
     levelUpAudio.currentTime = 0;
-
     gameState = { 
         userString: "", cursorPos: 0, playerHP: 100, monsterHP: 100, 
         isGameOver: false, cursorVisible: true, isBlocked: false, 
         playerName: "EQUIPO", selectedAvatarImg: "jenna8bits.png",
         currentLevel: 1, score: 0, timeLeft: TIME_LIMIT, mistakes: []
     };
-    
     document.getElementById('screen-end').style.display = 'none';
     document.getElementById('screen-game').style.display = 'none';
     document.getElementById('screen-start').style.display = 'flex';
@@ -155,99 +161,74 @@ function restartApp() {
 function nextExercise() {
     if (gameState.isGameOver) return;
     currentExercise = generateSingleExercise();
-    
     gameState.userString = "";
     gameState.cursorPos = 0;
     document.getElementById('user-input-display').classList.remove('error-text');
-    
     updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
-    
-    renderMathDirectly('exercise-display', currentExercise.q + " =");
+    renderMathDirectly('exercise-display', `${currentExercise.q} =`);
     renderUserAnswer();
     startTimer();
 }
 
 function renderUserAnswer() {
     if (gameState.isBlocked) return;
-    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
-    
     let cursor = gameState.cursorVisible ? '|' : '\\phantom{|}';
     let t = before + cursor + after;
-
     const o = (t.match(/\{/g) || []).length;
     const c = (t.match(/\}/g) || []).length;
     for(let i=0; i < (o-c); i++) t += "}";
-    
     renderMathDirectly('user-input-display', t);
 }
 
-function parseToMap(normStr) {
+function parseToMap(str) {
     let map = {};
-    if (normStr.match(/[\+\-]$/)) return null; 
-    let s = normStr.replace(/[\{\}\s]/g, "").replace(/(\+|-)1x/g, "$1x").replace(/^1x/g, "x").replace(/^-1x/g, "-x");
-    s = s.replace(/-/g, "+-");
+    let s = str.replace(/[\{\}\s]/g, "").replace(/(\+|-)x/g, "$11x").replace(/^x/g, "1x").replace(/-/g, "+-");
     if (s.startsWith("+")) s = s.substring(1);
-    
     let terms = s.split("+").filter(t => t !== "");
     for (let t of terms) {
-        let sign = 1;
-        if (t.startsWith("-")) { sign = -1; t = t.substring(1); }
         let coef = 1, exp = 0;
         if (t.includes("x")) {
             let parts = t.split("x");
-            if (parts.length > 2) return null; 
-            if (parts[0] !== "") coef = parseInt(parts[0]);
-            if (parts[1]) {
-                if (!parts[1].startsWith("^")) return null;
-                let expVal = parts[1].replace(/[\{\}\^]/g, "");
-                if (expVal === "") return null;
-                exp = parseInt(expVal);
-            } else { exp = 1; }
+            coef = parts[0] === "" ? 1 : (parts[0] === "-" ? -1 : parseInt(parts[0]));
+            if (parts[1]) exp = parseInt(parts[1].replace("^", ""));
+            else exp = 1;
         } else { coef = parseInt(t); }
-        
-        if (isNaN(coef) || isNaN(exp)) return null;
-        map[exp] = (map[exp] || 0) + (coef * sign);
+        map[exp] = (map[exp] || 0) + coef;
     }
     return map;
 }
 
 function isMathEquivalent(uStr, cStr) {
-    let uMap = parseToMap(uStr);
-    let cMap = parseToMap(cStr);
-    if (!uMap || !cMap) return false;
-    
-    for (let k in uMap) if (uMap[k] === 0) delete uMap[k];
-    for (let k in cMap) if (cMap[k] === 0) delete cMap[k];
-
-    let uKeys = Object.keys(uMap);
-    let cKeys = Object.keys(cMap);
-
-    if (uKeys.length !== cKeys.length) return false;
-    for (let k of uKeys) if (uMap[k] !== cMap[k]) return false;
-    return true;
-}
-
-function getPolynomialTerms(str) {
-    let s = str.replace(/[\{\}\s]/g, "").replace(/(\+|-)1x/g, "$1x").replace(/^1x/g, "x").replace(/^-1x/g, "-x").replace(/-/g, "+-");
-    if (s.startsWith("+")) s = s.substring(1);
-    return s.split("+").filter(t => t !== "").sort().join("");
+    try {
+        let uMap = parseToMap(uStr);
+        let cMap = parseToMap(cStr);
+        let allExps = new Set([...Object.keys(uMap), ...Object.keys(cMap)]);
+        for (let e of allExps) {
+            if ((uMap[e] || 0) !== (cMap[e] || 0)) return false;
+        }
+        return true;
+    } catch(e) { return false; }
 }
 
 function checkAnswer() {
     if (gameState.isGameOver || gameState.isBlocked || gameState.userString === "") return;
     
-    let uNormal = getPolynomialTerms(gameState.userString);
-    let cNormal = getPolynomialTerms(currentExercise.a);
+    let uNormal = gameState.userString.replace(/[\{\}\s]/g, "");
+    let cNormal = currentExercise.a.replace(/[\{\}\s]/g, "");
     
-    if (uNormal === cNormal) {
+    if (uNormal === cNormal) { 
         processHit(); 
-    } else if (isMathEquivalent(gameState.userString, currentExercise.a)) {
-        updateMessage("¡CASI! REDUCÍ TÉRMINOS SEMEJANTES");
-        playSound('click');
-    } else {
-        processMiss();
+    } 
+    else {
+        if (isMathEquivalent(gameState.userString, currentExercise.a)) {
+            // MENSAJE ACTUALIZADO SEGÚN TU PEDIDO
+            updateMessage("No te olvides de operar con los términos semejantes y ordenarlos de mayor a menor");
+            playSound('click');
+        } else {
+            processMiss();
+        }
     }
 }
 
@@ -258,7 +239,6 @@ function processHit() {
     gameState.monsterHP -= 25; 
     updateUI();
     updateMessage("¡ACIERTO!");
-    
     setTimeout(() => { 
         if (gameState.monsterHP <= 0) {
             gameState.score += 500; 
@@ -267,18 +247,11 @@ function processHit() {
                 gameState.monsterHP = 100;
                 updateUI();
                 updateMessage(`¡NIVEL ${gameState.currentLevel} DESBLOQUEADO!`);
-                
                 levelUpAudio.currentTime = 0; 
-                levelUpAudio.play().catch(e => console.log("Audio falló", e));
-
+                levelUpAudio.play().catch(e => console.log(e));
                 setTimeout(() => { gameState.isBlocked = false; nextExercise(); }, 2500);
-            } else {
-                endGame(true);
-            }
-        } else {
-            gameState.isBlocked = false; 
-            nextExercise(); 
-        }
+            } else { endGame(true); }
+        } else { gameState.isBlocked = false; nextExercise(); }
     }, 1200);
 }
 
@@ -286,81 +259,51 @@ function processMiss() {
     gameState.isBlocked = true; clearInterval(timerInterval);
     playSound('hit'); gameState.playerHP -= 20; updateUI();
     updateMessage("ERROR");
-    
-    gameState.mistakes.push({
-        q: currentExercise.q,
-        user: gameState.userString === "" ? "Vacío" : gameState.userString,
-        correct: currentExercise.a
-    });
-
+    gameState.mistakes.push({ q: currentExercise.q, user: gameState.userString === "" ? "Vacío" : gameState.userString, correct: currentExercise.a });
     const d = document.getElementById('user-input-display');
     d.classList.add('error-text'); 
     renderMathDirectly('user-input-display', `\\text{Solución: } ${currentExercise.a}`);
-    
     animateDamage('app-container');
-    setTimeout(() => { 
-        gameState.isBlocked = false; 
-        if (gameState.playerHP <= 0) endGame(false); 
-        else nextExercise(); 
-    }, 4000);
+    setTimeout(() => { gameState.isBlocked = false; if (gameState.playerHP <= 0) endGame(false); else nextExercise(); }, 4000);
 }
 
 function handleInput(k) {
     if (gameState.isGameOver || gameState.isBlocked) return;
     playSound('click');
-    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
-    
     const inExp = before.lastIndexOf('^{') > before.lastIndexOf('}');
-    
     let insertStr = k;
     if (k === '^') insertStr = "^{";
     else if (k === '²') insertStr = "^{2}";
     else if (k === '³') insertStr = "^{3}";
     else if (k === '⁴') insertStr = "^{4}";
-
-    if (inExp && (k === '+' || k === '-' || k === 'x' || k === '(' || k === ')')) {
-        insertStr = "}" + k;
-    }
-
+    if (inExp && "0123456789".includes(k)) { insertStr = k + "}"; } 
+    else if (inExp && (k === '+' || k === '-' || k === 'x' || k === '(' || k === ')')) { insertStr = "}" + k; }
     gameState.userString = before + insertStr + after;
     gameState.cursorPos += insertStr.length;
-    
-    if (document.getElementById('battle-message').innerText.includes("CASI")) {
-        updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
-    }
     renderUserAnswer();
 }
 
 function backspace() {
     if (gameState.isGameOver || gameState.isBlocked || gameState.cursorPos === 0) return;
     playSound('click');
-    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
-    
     let delLength = 1;
     if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) delLength = 4;
     else if (before.endsWith("^{")) delLength = 2;
     else if (before.endsWith("}")) delLength = 1; 
-    
     gameState.userString = before.slice(0, -delLength) + after;
     gameState.cursorPos -= delLength;
-    
-    if (document.getElementById('battle-message').innerText.includes("CASI")) {
-        updateMessage(`¡TU TURNO! (NIVEL ${gameState.currentLevel})`);
-    }
     renderUserAnswer();
 }
 
 function moveCursor(dir) {
     if (gameState.isGameOver || gameState.isBlocked) return;
-    
     let before = gameState.userString.slice(0, gameState.cursorPos);
     let after = gameState.userString.slice(gameState.cursorPos);
     const inExp = before.lastIndexOf('^{') > before.lastIndexOf('}');
-    
     if (dir === 'left' && gameState.cursorPos > 0) {
         if (before.endsWith("^{2}") || before.endsWith("^{3}") || before.endsWith("^{4}")) gameState.cursorPos -= 4;
         else if (before.endsWith("^{")) gameState.cursorPos -= 2;
@@ -368,7 +311,6 @@ function moveCursor(dir) {
         else gameState.cursorPos--;
         playSound('click');
     }
-    
     if (dir === 'right') {
         if (gameState.cursorPos < gameState.userString.length) {
             if (after.startsWith("^{2}") || after.startsWith("^{3}") || after.startsWith("^{4}")) gameState.cursorPos += 4;
@@ -376,11 +318,7 @@ function moveCursor(dir) {
             else if (after.startsWith("}")) gameState.cursorPos += 1;
             else gameState.cursorPos++;
             playSound('click');
-        } else if (inExp) {
-            gameState.userString += "}";
-            gameState.cursorPos++;
-            playSound('click');
-        }
+        } else if (inExp) { gameState.userString += "}"; gameState.cursorPos++; playSound('click'); }
     }
     renderUserAnswer();
 }
@@ -413,19 +351,10 @@ function updateUI() {
     document.getElementById('player-hp').style.width = Math.max(0, gameState.playerHP) + "%";
     const monsterBar = document.getElementById('monster-hp');
     monsterBar.style.width = Math.max(0, gameState.monsterHP) + "%";
-    
     const enemyName = document.getElementById('enemy-name-display');
-    
-    if (gameState.currentLevel === 1) {
-        monsterBar.style.backgroundColor = '#2ecc71';
-        if (enemyName) enemyName.innerText = `BOSS NIVEL 1`;
-    } else if (gameState.currentLevel === 2) {
-        monsterBar.style.backgroundColor = '#e67e22';
-        if (enemyName) enemyName.innerText = `BOSS NIVEL 2`;
-    } else if (gameState.currentLevel === 3) {
-        monsterBar.style.backgroundColor = '#9b59b6';
-        if (enemyName) enemyName.innerText = `BOSS FINAL SUPER PRO`;
-    }
+    if (gameState.currentLevel === 1) { monsterBar.style.backgroundColor = '#2ecc71'; if (enemyName) enemyName.innerText = `BOSS NIVEL 1`; }
+    else if (gameState.currentLevel === 2) { monsterBar.style.backgroundColor = '#e67e22'; if (enemyName) enemyName.innerText = `BOSS NIVEL 2`; }
+    else if (gameState.currentLevel === 3) { monsterBar.style.backgroundColor = '#9b59b6'; if (enemyName) enemyName.innerText = `BOSS FINAL SUPER PRO`; }
 }
 
 function updateMessage(t) { document.getElementById('battle-message').innerText = t; }
@@ -434,52 +363,25 @@ function animateDamage(id) { const el = document.getElementById(id); if(el) { el
 function endGame(win) {
     gameState.isGameOver = true; clearInterval(timerInterval);
     levelUpAudio.pause();
-    levelUpAudio.currentTime = 0;
-
     document.getElementById('screen-game').style.display = 'none';
     document.getElementById('screen-end').style.display = 'flex';
     document.getElementById('end-title').innerText = win ? "¡VICTORIA ABSOLUTA!" : "DERROTA";
     document.getElementById('end-title').style.color = win ? "#2ecc71" : "#e74c3c";
     document.getElementById('end-message').innerText = win ? "HAS DERROTADO A LOS 3 JEFES." : "EL ÁLGEBRA FUE DEMASIADO PARA USTEDES.";
-    
     document.getElementById('end-score').innerText = `TU PUNTAJE: ${gameState.score} pts`;
     document.getElementById('print-team-name').innerText = `Equipo: ${gameState.playerName} - Puntaje: ${gameState.score} pts`;
-
-    let leaderBoard = JSON.parse(localStorage.getItem('algebraRanking')) || [];
-    leaderBoard.push({ name: gameState.playerName, score: gameState.score });
-    leaderBoard.sort((a,b) => b.score - a.score);
-    leaderBoard = leaderBoard.slice(0, 5); 
-    localStorage.setItem('algebraRanking', JSON.stringify(leaderBoard));
-
-    const listUl = document.getElementById('ranking-list');
-    listUl.innerHTML = '';
-    leaderBoard.forEach((entry, index) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${index + 1}. ${entry.name}</span> <span class="ranking-score">${entry.score} pts</span>`;
-        listUl.appendChild(li);
-    });
-
     const mistakesBoard = document.getElementById('mistakes-board');
     const mistakesList = document.getElementById('mistakes-list');
     mistakesList.innerHTML = '';
-    
     if (gameState.mistakes.length > 0) {
         mistakesBoard.style.display = 'block';
         gameState.mistakes.forEach((err) => {
             const li = document.createElement('li');
-            li.innerHTML = `<div class="error-item">
-                <span class="err-q">Ejercicio: \\( ${err.q} \\)</span>
-                <span class="err-u">Tu respuesta: \\( ${err.user} \\)</span>
-                <span class="err-c">Correcto: \\( ${err.correct} \\)</span>
-            </div>`;
+            li.innerHTML = `<div class="error-item"><span>Ejercicio: \\( ${err.q} \\)</span><br><span>Tu respuesta: \\( ${err.user} \\)</span><br><span>Correcto: \\( ${err.correct} \\)</span></div>`;
             mistakesList.appendChild(li);
         });
-        if (window.MathJax && window.MathJax.typesetPromise) {
-            window.MathJax.typesetPromise([mistakesList]).catch(()=>{});
-        }
-    } else {
-        mistakesBoard.style.display = 'none';
-    }
+        if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise([mistakesList]).catch(()=>{}); }
+    } else { mistakesBoard.style.display = 'none'; }
 }
 
 function downloadPDF() { window.print(); }
@@ -488,14 +390,10 @@ document.getElementById('btn-spell').onclick = checkAnswer;
 document.getElementById('btn-reset').onclick = () => { if(!gameState.isBlocked) { gameState.userString = ""; gameState.cursorPos = 0; renderUserAnswer(); } };
 
 document.addEventListener('keydown', (e) => {
-    if (document.getElementById('screen-start').style.display === 'flex') { 
-        if (e.key === "Enter") startGame(); 
-        return; 
-    }
+    if (document.getElementById('screen-start').style.display === 'flex') { if (e.key === "Enter") startGame(); return; }
     if (!gameState.isGameOver && !gameState.isBlocked) {
         let key = e.key;
         if (key === '*') key = 'x'; 
-        
         if ("0123456789+-x^".includes(key)) handleInput(key);
         else if (key === "Backspace") { e.preventDefault(); backspace(); }
         else if (key === "Enter") checkAnswer();
@@ -512,20 +410,11 @@ function initKeyboard() {
     keys.forEach(k => {
         const b = document.createElement('button');
         b.innerText = k === '⌫' ? 'BORRAR' : k; 
-        
         b.className = 'key';
-        if (k === '⌫') {
-            b.classList.add('key-backspace');
-        } else if (k === '0') {
-            b.classList.add('key-zero');
-        } else if (isNaN(k) && k !== '0') {
-            b.classList.add('key-op');
-        }
-        
-        if (['²','³','⁴'].includes(k)) {
-            b.classList.add('key-exp');
-        }
-
+        if (k === '⌫') b.classList.add('key-backspace');
+        else if (k === '0') b.classList.add('key-zero');
+        else if (isNaN(k) && k !== '0') b.classList.add('key-op');
+        if (['²','³','⁴'].includes(k)) b.classList.add('key-exp');
         b.onmousedown = (ev) => { 
             ev.preventDefault(); 
             if (k === '⌫') backspace(); 
